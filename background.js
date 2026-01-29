@@ -122,6 +122,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
+// URLをサニタイズ（プライバシー保護）
+function sanitizeUrl(urlString) {
+  try {
+    const url = new URL(urlString);
+
+    // chrome:// や chrome-extension:// は記録しない
+    if (url.protocol === 'chrome:' || url.protocol === 'chrome-extension:') {
+      return null;
+    }
+
+    // 機密情報が含まれる可能性のあるページは除外
+    const sensitiveKeywords = ['password', 'login', 'signin', 'auth', 'token', 'key', 'secret'];
+    const lowerPath = url.pathname.toLowerCase();
+    const lowerHost = url.hostname.toLowerCase();
+
+    for (const keyword of sensitiveKeywords) {
+      if (lowerHost.includes(keyword) || lowerPath.includes(keyword)) {
+        return `${url.protocol}//${url.hostname}/[${keyword} page]`;
+      }
+    }
+
+    // クエリパラメータとハッシュを除外（個人情報が含まれる可能性が高い）
+    // プロトコル + ホスト + パスのみを返す
+    return `${url.protocol}//${url.hostname}${url.pathname}`;
+
+  } catch (e) {
+    // 無効なURLは記録しない
+    return null;
+  }
+}
+
 // アクティビティの記録
 async function recordActivity(activity) {
   const result = await chrome.storage.local.get(['activities', 'settings']);
@@ -132,22 +163,18 @@ async function recordActivity(activity) {
     return;
   }
 
-  // URLからパスワードや機密情報を除外
+  // URLをサニタイズ
   if (activity.url) {
-    try {
-      const url = new URL(activity.url);
-      // chrome:// や chrome-extension:// は除外
-      if (url.protocol === 'chrome:' || url.protocol === 'chrome-extension:') {
-        return;
-      }
-      // パスワードページは除外
-      if (url.hostname.includes('password') || url.pathname.includes('password')) {
-        activity.url = url.origin + '/[password page]';
-      }
-    } catch (e) {
-      // 無効なURLは無視
-      return;
+    const sanitizedUrl = sanitizeUrl(activity.url);
+    if (!sanitizedUrl) {
+      return; // 記録しないURLの場合
     }
+    activity.url = sanitizedUrl;
+  }
+
+  // タイトルも除外（個人情報が含まれる可能性）
+  if (activity.title) {
+    delete activity.title;
   }
 
   activities.push(activity);
