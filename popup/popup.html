@@ -57,8 +57,13 @@
     <div class="tab-content" id="analysis">
       <div class="analysis-container">
         <div class="analysis-header">
-          <h3>🔍 分析結果</h3>
-          <span class="analysis-time" id="analysisTime">未実行</span>
+          <div>
+            <h3>🔍 分析結果</h3>
+            <span class="analysis-time" id="analysisTime">未実行</span>
+          </div>
+          <button class="btn btn-export" id="exportMarkdown" style="display: none;">
+            📝 MDエクスポート
+          </button>
         </div>
 
         <div id="analysisResults">
@@ -83,6 +88,12 @@
           <div class="section">
             <h4>📝 総評</h4>
             <div id="summary" class="summary-text"></div>
+          </div>
+
+          <!-- 過去の分析履歴 -->
+          <div class="section">
+            <h4>📚 過去の分析履歴</h4>
+            <div id="historyList"></div>
           </div>
         </div>
       </div>

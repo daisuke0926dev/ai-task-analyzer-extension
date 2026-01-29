@@ -243,11 +243,26 @@ async function performAnalysis() {
     );
 
     // 分析結果を保存
+    const timestamp = Date.now();
+    const analysisRecord = {
+      timestamp: timestamp,
+      result: analysis
+    };
+
     await chrome.storage.local.set({
-      lastAnalysis: {
-        timestamp: Date.now(),
-        result: analysis
-      }
+      lastAnalysis: analysisRecord
+    });
+
+    // 分析履歴にも追加（最大30件保持）
+    const historyResult = await chrome.storage.local.get('analysisHistory');
+    const history = historyResult.analysisHistory || [];
+    history.unshift(analysisRecord); // 最新を先頭に追加
+
+    // 最大30件に制限
+    const limitedHistory = history.slice(0, 30);
+
+    await chrome.storage.local.set({
+      analysisHistory: limitedHistory
     });
 
     return { success: true, analysis };

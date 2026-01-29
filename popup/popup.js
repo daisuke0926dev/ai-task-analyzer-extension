@@ -83,8 +83,14 @@ async function loadAnalysisResults() {
     document.querySelector('#analysisResults .empty-state').style.display = 'none';
     document.getElementById('analysisContent').style.display = 'block';
 
+    // エクスポートボタンを表示
+    document.getElementById('exportMarkdown').style.display = 'block';
+
     // 結果の表示
     displayAnalysisResults(lastAnalysis.result);
+
+    // 履歴の表示
+    loadAnalysisHistory();
 
   } catch (error) {
     console.error('Failed to load analysis results:', error);
@@ -165,6 +171,9 @@ function setupEventListeners() {
 
   // 設定を保存ボタン
   document.getElementById('saveSettings').addEventListener('click', handleSaveSettings);
+
+  // Markdownエクスポートボタン
+  document.getElementById('exportMarkdown').addEventListener('click', handleExportMarkdown);
 }
 
 // 今すぐ分析
@@ -288,4 +297,156 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Markdownエクスポート
+async function handleExportMarkdown() {
+  try {
+    const result = await chrome.storage.local.get('lastAnalysis');
+    const lastAnalysis = result.lastAnalysis;
+
+    if (!lastAnalysis) {
+      alert('エクスポートする分析結果がありません。');
+      return;
+    }
+
+    const markdown = generateMarkdown(lastAnalysis);
+    downloadMarkdown(markdown, lastAnalysis.timestamp);
+
+    alert('Markdownファイルをダウンロードしました！');
+
+  } catch (error) {
+    console.error('Export error:', error);
+    alert(`エクスポートに失敗しました: ${error.message}`);
+  }
+}
+
+// Markdown生成
+function generateMarkdown(analysisData) {
+  const date = new Date(analysisData.timestamp);
+  const dateStr = date.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+
+  const analysis = analysisData.result;
+
+  let markdown = `# AI Task Analyzer - 分析レポート\n\n`;
+  markdown += `**分析日時**: ${date.toLocaleString('ja-JP')}\n\n`;
+  markdown += `---\n\n`;
+
+  // 自動化可能なタスク
+  markdown += `## 🎯 自動化可能なタスク\n\n`;
+
+  if (analysis.automatable_tasks && analysis.automatable_tasks.length > 0) {
+    analysis.automatable_tasks.forEach((task, index) => {
+      markdown += `### ${index + 1}. ${task.task}\n\n`;
+      markdown += `- **頻度**: ${getFrequencyLabel(task.frequency)}\n`;
+      markdown += `- **優先度**: ${getPriorityLabel(task.priority)}\n`;
+      markdown += `- **推定削減時間**: ${task.time_saving}分/日\n`;
+      markdown += `- **自動化方法**:\n\n`;
+      markdown += `  ${task.automation_method}\n\n`;
+      markdown += `---\n\n`;
+    });
+  } else {
+    markdown += `自動化可能なタスクは検出されませんでした。\n\n`;
+  }
+
+  // プロダクトアイデア
+  markdown += `## 💡 プロダクト提案\n\n`;
+
+  if (analysis.product_ideas && analysis.product_ideas.length > 0) {
+    analysis.product_ideas.forEach((product, index) => {
+      markdown += `### ${index + 1}. ${product.name}\n\n`;
+      markdown += `${product.description}\n\n`;
+      markdown += `**対象タスク**:\n`;
+      product.target_tasks.forEach(task => {
+        markdown += `- ${task}\n`;
+      });
+      markdown += `\n`;
+    });
+  } else {
+    markdown += `プロダクト提案はありません。\n\n`;
+  }
+
+  // サマリー
+  markdown += `## 📝 総評\n\n`;
+  markdown += `${analysis.summary || '総評はありません。'}\n\n`;
+
+  // フッター
+  markdown += `---\n\n`;
+  markdown += `*このレポートは [AI Task Analyzer](https://github.com/yourusername/ai-task-analyzer-extension) によって生成されました。*\n`;
+
+  return markdown;
+}
+
+// Markdownダウンロード
+function downloadMarkdown(content, timestamp) {
+  const date = new Date(timestamp);
+  const dateStr = date.toISOString().split('T')[0]; // YYYY-MM-DD
+  const filename = `ai-task-analysis_${dateStr}.md`;
+
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+// 分析履歴の読み込み
+async function loadAnalysisHistory() {
+  try {
+    const result = await chrome.storage.local.get('analysisHistory');
+    const history = result.analysisHistory || [];
+
+    const historyList = document.getElementById('historyList');
+    historyList.innerHTML = '';
+
+    if (history.length === 0) {
+      historyList.innerHTML = '<p class="empty-state">過去の分析履歴はありません。</p>';
+      return;
+    }
+
+    // 最新の5件のみ表示
+    const recentHistory = history.slice(0, 5);
+
+    recentHistory.forEach((record, index) => {
+      const date = new Date(record.timestamp);
+      const dateStr = date.toLocaleDateString('ja-JP');
+      const timeStr = date.toLocaleTimeString('ja-JP');
+
+      const taskCount = record.result?.automatable_tasks?.length || 0;
+
+      const historyItem = document.createElement('div');
+      historyItem.className = 'history-item';
+      historyItem.innerHTML = `
+        <div class="history-info">
+          <span class="history-date">${dateStr} ${timeStr}</span>
+          <span class="history-tasks">${taskCount}個のタスク</span>
+        </div>
+        <button class="btn-history-export" data-index="${index}">📝 エクスポート</button>
+      `;
+
+      historyList.appendChild(historyItem);
+    });
+
+    // 履歴エクスポートボタンのイベントリスナー
+    document.querySelectorAll('.btn-history-export').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const index = parseInt(e.target.dataset.index);
+        const record = recentHistory[index];
+        const markdown = generateMarkdown(record);
+        downloadMarkdown(markdown, record.timestamp);
+        alert('Markdownファイルをダウンロードしました！');
+      });
+    });
+
+  } catch (error) {
+    console.error('Failed to load history:', error);
+  }
 }
