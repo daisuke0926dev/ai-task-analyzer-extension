@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Task Analyzer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 AI Task Analyzer</h1>
+      <p class="subtitle">ブラウザ操作をAIで分析</p>
+    </header>
+
+    <!-- タブナビゲーション -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="dashboard">ダッシュボード</button>
+      <button class="tab-btn" data-tab="analysis">分析結果</button>
+      <button class="tab-btn" data-tab="settings">設定</button>
+    </div>
+
+    <!-- ダッシュボードタブ -->
+    <div class="tab-content active" id="dashboard">
+      <div class="status-card">
+        <h3>📊 本日の記録</h3>
+        <div class="stats">
+          <div class="stat-item">
+            <span class="stat-label">総アクティビティ</span>
+            <span class="stat-value" id="totalActivities">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">訪問サイト数</span>
+            <span class="stat-value" id="uniqueSites">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">記録状態</span>
+            <span class="stat-value" id="recordingStatus">記録中</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-card">
+        <h3>⚡ アクション</h3>
+        <button class="btn btn-primary" id="analyzeNow">今すぐ分析</button>
+        <button class="btn btn-secondary" id="clearData">データをクリア</button>
+      </div>
+
+      <div class="info-card">
+        <p class="info-text">
+          毎日18時に自動で分析を実行し、AI代替可能なタスクを通知します。
+        </p>
+      </div>
+    </div>
+
+    <!-- 分析結果タブ -->
+    <div class="tab-content" id="analysis">
+      <div class="analysis-container">
+        <div class="analysis-header">
+          <h3>🔍 分析結果</h3>
+          <span class="analysis-time" id="analysisTime">未実行</span>
+        </div>
+
+        <div id="analysisResults">
+          <p class="empty-state">まだ分析が実行されていません。<br>「今すぐ分析」ボタンをクリックするか、18時まで待機してください。</p>
+        </div>
+
+        <!-- 分析結果の表示エリア -->
+        <div id="analysisContent" style="display: none;">
+          <!-- 自動化可能なタスク -->
+          <div class="section">
+            <h4>🎯 自動化可能なタスク</h4>
+            <div id="tasksList"></div>
+          </div>
+
+          <!-- プロダクトアイデア -->
+          <div class="section">
+            <h4>💡 プロダクト提案</h4>
+            <div id="productsList"></div>
+          </div>
+
+          <!-- サマリー -->
+          <div class="section">
+            <h4>📝 総評</h4>
+            <div id="summary" class="summary-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 設定タブ -->
+    <div class="tab-content" id="settings">
+      <div class="settings-container">
+        <h3>⚙️ 設定</h3>
+
+        <div class="setting-item">
+          <label for="apiKey">OpenAI API Key</label>
+          <input type="password" id="apiKey" placeholder="sk-...">
+          <small>API Keyは安全に保存され、AIの分析にのみ使用されます。</small>
+          <a href="https://platform.openai.com/api-keys" target="_blank" class="link">API Keyを取得</a>
+        </div>
+
+        <div class="setting-item">
+          <label for="notificationTime">通知時刻</label>
+          <input type="time" id="notificationTime" value="18:00">
+          <small>毎日この時刻に分析結果を通知します。</small>
+        </div>
+
+        <div class="setting-item">
+          <label class="checkbox-label">
+            <input type="checkbox" id="recordingEnabled" checked>
+            <span>記録を有効にする</span>
+          </label>
+          <small>オフにすると操作の記録を停止します。</small>
+        </div>
+
+        <button class="btn btn-primary" id="saveSettings">設定を保存</button>
+        <div id="saveStatus" class="save-status"></div>
+      </div>
+
+      <div class="info-card">
+        <h4>プライバシーについて</h4>
+        <ul class="privacy-list">
+          <li>パスワードやクレジットカード情報は記録されません</li>
+          <li>記録データは本拡張機能内にのみ保存されます</li>
+          <li>OpenAI APIへは分析時のみデータを送信します</li>
+          <li>API送信時は機密情報を除外します</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ローディング表示 -->
+    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+      <div class="spinner"></div>
+      <p>AI分析中...</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

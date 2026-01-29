@@ -1,0 +1,23 @@
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Extension specific
+utils/
+
+# Test data
+test-data/
+
+# Icons (if regenerated)
+icons/*.png
+
+# Temporary files
+*.tmp
+*.log
