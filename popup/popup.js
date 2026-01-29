@@ -7,6 +7,7 @@ function init() {
   loadDashboard();
   loadAnalysisResults();
   loadSettings();
+  loadSummary('week'); // デフォルトは週次
   setupEventListeners();
 }
 
@@ -174,6 +175,18 @@ function setupEventListeners() {
 
   // Markdownエクスポートボタン
   document.getElementById('exportMarkdown').addEventListener('click', handleExportMarkdown);
+
+  // サマリー期間切り替えボタン
+  document.querySelectorAll('.btn-period').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.btn-period').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      loadSummary(e.target.dataset.period);
+    });
+  });
+
+  // サマリーエクスポートボタン
+  document.getElementById('exportSummary').addEventListener('click', handleExportSummary);
 }
 
 // 今すぐ分析
@@ -449,4 +462,201 @@ async function loadAnalysisHistory() {
   } catch (error) {
     console.error('Failed to load history:', error);
   }
+}
+
+// サマリーの読み込み
+async function loadSummary(period = 'week') {
+  try {
+    const summaryContent = document.getElementById('summaryContent');
+    const summaryStats = document.getElementById('summaryStats');
+    const summaryLoading = document.getElementById('summaryLoading');
+
+    // ローディング表示
+    summaryContent.style.display = 'none';
+    summaryStats.style.display = 'none';
+    summaryLoading.style.display = 'block';
+
+    // バックグラウンドにサマリー生成を依頼
+    const response = await chrome.runtime.sendMessage({
+      type: 'getSummary',
+      period: period
+    });
+
+    summaryLoading.style.display = 'none';
+
+    if (!response.success) {
+      summaryContent.style.display = 'block';
+      summaryContent.innerHTML = '<p class="empty-state">サマリーの生成に失敗しました。</p>';
+      return;
+    }
+
+    const summary = response.summary;
+
+    if (summary.totalAnalyses === 0) {
+      summaryContent.style.display = 'block';
+      summaryContent.innerHTML = `<p class="empty-state">過去${period === 'week' ? '7日間' : '30日間'}の分析データがありません。</p>`;
+      return;
+    }
+
+    // 統計を表示
+    summaryStats.style.display = 'block';
+    document.getElementById('summaryAnalysesCount').textContent = summary.totalAnalyses;
+    document.getElementById('summaryUniqueTasksCount').textContent = summary.totalUniqueTasks;
+    document.getElementById('summaryTimeSavings').textContent = `${summary.totalTimeSavings}分`;
+
+    // 繰り返しタスクの表示
+    const recurringTasksList = document.getElementById('recurringTasksList');
+    recurringTasksList.innerHTML = '';
+
+    if (summary.recurringTasks.length === 0) {
+      recurringTasksList.innerHTML = '<p class="empty-state">繰り返し提案されたタスクはありません。</p>';
+    } else {
+      summary.recurringTasks.forEach(task => {
+        const taskItem = document.createElement('div');
+        taskItem.className = 'recurring-task-item';
+        taskItem.innerHTML = `
+          <div class="recurring-task-header">
+            <div class="recurring-task-title">${escapeHtml(task.task)}</div>
+            <div class="recurring-task-badge">${task.count}回</div>
+          </div>
+          <div class="recurring-task-meta">
+            <span>累積削減: ${task.totalTimeSavings}分</span>
+            <span>優先度: ${getPriorityLabel(task.priority)}</span>
+          </div>
+          <div class="recurring-task-method">${escapeHtml(task.automation_method)}</div>
+        `;
+        recurringTasksList.appendChild(taskItem);
+      });
+    }
+
+    // プロダクトアイデアの表示
+    const summaryProductsList = document.getElementById('summaryProductsList');
+    summaryProductsList.innerHTML = '';
+
+    if (summary.productIdeas.length === 0) {
+      summaryProductsList.innerHTML = '<p class="empty-state">プロダクト提案はありません。</p>';
+    } else {
+      summary.productIdeas.forEach(product => {
+        const productItem = document.createElement('div');
+        productItem.className = 'product-item';
+        productItem.innerHTML = `
+          <div class="product-name">${escapeHtml(product.name)}</div>
+          <div class="product-description">${escapeHtml(product.description)}</div>
+          <div class="product-targets">対象: ${product.target_tasks.join(', ')}</div>
+        `;
+        summaryProductsList.appendChild(productItem);
+      });
+    }
+
+    // サマリーデータを一時保存（エクスポート用）
+    window.currentSummary = summary;
+
+  } catch (error) {
+    console.error('Failed to load summary:', error);
+    document.getElementById('summaryLoading').style.display = 'none';
+    document.getElementById('summaryContent').style.display = 'block';
+    document.getElementById('summaryContent').innerHTML = '<p class="empty-state">エラーが発生しました。</p>';
+  }
+}
+
+// サマリーのMarkdownエクスポート
+async function handleExportSummary() {
+  try {
+    if (!window.currentSummary) {
+      alert('エクスポートするサマリーがありません。');
+      return;
+    }
+
+    const summary = window.currentSummary;
+    const markdown = generateSummaryMarkdown(summary);
+
+    const period = summary.period === 'week' ? 'weekly' : 'monthly';
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `ai-task-summary_${period}_${date}.md`;
+
+    const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    alert('サマリーをエクスポートしました！');
+
+  } catch (error) {
+    console.error('Export error:', error);
+    alert(`エクスポートに失敗しました: ${error.message}`);
+  }
+}
+
+// サマリーのMarkdown生成
+function generateSummaryMarkdown(summary) {
+  const periodLabel = summary.period === 'week' ? '週次' : '月次';
+  const periodDays = summary.period === 'week' ? '7日間' : '30日間';
+
+  let markdown = `# AI Task Analyzer - ${periodLabel}サマリー\n\n`;
+
+  if (summary.dateRange) {
+    const start = summary.dateRange.start.toLocaleDateString('ja-JP');
+    const end = summary.dateRange.end.toLocaleDateString('ja-JP');
+    markdown += `**期間**: ${start} 〜 ${end}\n\n`;
+  }
+
+  markdown += `---\n\n`;
+
+  // 統計サマリー
+  markdown += `## 📊 統計サマリー\n\n`;
+  markdown += `- **分析回数**: ${summary.totalAnalyses}回\n`;
+  markdown += `- **ユニークタスク数**: ${summary.totalUniqueTasks}個\n`;
+  markdown += `- **累積削減可能時間**: **${summary.totalTimeSavings}分** (${Math.round(summary.totalTimeSavings / 60 * 10) / 10}時間)\n\n`;
+
+  if (summary.totalTimeSavings > 0) {
+    const dailyAverage = Math.round(summary.totalTimeSavings / (summary.period === 'week' ? 7 : 30));
+    markdown += `💡 1日平均 **${dailyAverage}分** の削減が可能です！\n\n`;
+  }
+
+  markdown += `---\n\n`;
+
+  // 繰り返しタスク
+  markdown += `## 🔁 繰り返し提案されたタスク（優先度順）\n\n`;
+
+  if (summary.recurringTasks.length === 0) {
+    markdown += `繰り返し提案されたタスクはありません。\n\n`;
+  } else {
+    summary.recurringTasks.forEach((task, index) => {
+      markdown += `### ${index + 1}. ${task.task}\n\n`;
+      markdown += `- **出現回数**: ${task.count}回\n`;
+      markdown += `- **累積削減時間**: ${task.totalTimeSavings}分\n`;
+      markdown += `- **優先度**: ${getPriorityLabel(task.priority)}\n`;
+      markdown += `- **自動化方法**:\n\n`;
+      markdown += `  ${task.automation_method}\n\n`;
+      markdown += `---\n\n`;
+    });
+  }
+
+  // プロダクトアイデア
+  markdown += `## 💡 統合プロダクト提案\n\n`;
+
+  if (summary.productIdeas.length === 0) {
+    markdown += `プロダクト提案はありません。\n\n`;
+  } else {
+    summary.productIdeas.forEach((product, index) => {
+      markdown += `### ${index + 1}. ${product.name}\n\n`;
+      markdown += `${product.description}\n\n`;
+      markdown += `**対象タスク**:\n`;
+      product.target_tasks.forEach(task => {
+        markdown += `- ${task}\n`;
+      });
+      markdown += `\n`;
+    });
+  }
+
+  // フッター
+  markdown += `---\n\n`;
+  markdown += `*この${periodLabel}サマリーは [AI Task Analyzer](https://github.com/yourusername/ai-task-analyzer-extension) によって生成されました。*\n`;
+
+  return markdown;
 }

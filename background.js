@@ -119,6 +119,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse(result);
     });
     return true; // 非同期レスポンス
+  } else if (message.type === 'getSummary') {
+    generateSummary(message.period).then(summary => {
+      sendResponse({ success: true, summary });
+    });
+    return true; // 非同期レスポンス
   }
 });
 
@@ -413,5 +418,199 @@ chrome.notifications.onClicked.addListener((notificationId) => {
   // ポップアップを開く（新しいタブでも可）
   chrome.action.openPopup();
 });
+
+// 週次・月次サマリーの生成
+async function generateSummary(period = 'week') {
+  try {
+    const result = await chrome.storage.local.get('analysisHistory');
+    const history = result.analysisHistory || [];
+
+    if (history.length === 0) {
+      return {
+        period,
+        totalAnalyses: 0,
+        dateRange: null,
+        recurringTasks: [],
+        totalTimeSavings: 0,
+        productIdeas: []
+      };
+    }
+
+    // 期間の設定
+    const now = Date.now();
+    const periodMs = period === 'week' ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+    const startTime = now - periodMs;
+
+    // 期間内の分析を抽出
+    const periodAnalyses = history.filter(record => record.timestamp >= startTime);
+
+    if (periodAnalyses.length === 0) {
+      return {
+        period,
+        totalAnalyses: 0,
+        dateRange: null,
+        recurringTasks: [],
+        totalTimeSavings: 0,
+        productIdeas: []
+      };
+    }
+
+    // 日付範囲
+    const timestamps = periodAnalyses.map(r => r.timestamp);
+    const dateRange = {
+      start: new Date(Math.min(...timestamps)),
+      end: new Date(Math.max(...timestamps))
+    };
+
+    // 全タスクを収集
+    const allTasks = [];
+    const allProductIdeas = [];
+
+    periodAnalyses.forEach(record => {
+      if (record.result?.automatable_tasks) {
+        record.result.automatable_tasks.forEach(task => {
+          allTasks.push({
+            ...task,
+            timestamp: record.timestamp
+          });
+        });
+      }
+      if (record.result?.product_ideas) {
+        allProductIdeas.push(...record.result.product_ideas);
+      }
+    });
+
+    // 繰り返しタスクの検出（類似タスク名でグループ化）
+    const taskGroups = groupSimilarTasks(allTasks);
+
+    // 繰り返し回数でソート
+    const recurringTasks = taskGroups
+      .filter(group => group.count >= 2) // 2回以上出現
+      .sort((a, b) => b.count - a.count)
+      .map(group => ({
+        task: group.representative.task,
+        count: group.count,
+        totalTimeSavings: group.totalTimeSavings,
+        priority: group.representative.priority,
+        automation_method: group.representative.automation_method,
+        firstSeen: new Date(group.firstTimestamp),
+        lastSeen: new Date(group.lastTimestamp)
+      }));
+
+    // 累積削減時間（全タスク）
+    const totalTimeSavings = allTasks.reduce((sum, task) => {
+      return sum + (parseInt(task.time_saving) || 0);
+    }, 0);
+
+    // プロダクトアイデアの統合（重複除去）
+    const uniqueProductIdeas = deduplicateProductIdeas(allProductIdeas);
+
+    return {
+      period,
+      totalAnalyses: periodAnalyses.length,
+      dateRange,
+      recurringTasks,
+      totalTimeSavings,
+      totalUniqueTasks: taskGroups.length,
+      productIdeas: uniqueProductIdeas.slice(0, 5) // 上位5件
+    };
+
+  } catch (error) {
+    console.error('Summary generation error:', error);
+    throw error;
+  }
+}
+
+// 類似タスクをグループ化
+function groupSimilarTasks(tasks) {
+  const groups = [];
+
+  tasks.forEach(task => {
+    // 既存グループとの類似度チェック
+    let matched = false;
+
+    for (const group of groups) {
+      if (isSimilarTask(task.task, group.representative.task)) {
+        group.tasks.push(task);
+        group.count++;
+        group.totalTimeSavings += parseInt(task.time_saving) || 0;
+        group.lastTimestamp = Math.max(group.lastTimestamp, task.timestamp);
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      groups.push({
+        representative: task,
+        tasks: [task],
+        count: 1,
+        totalTimeSavings: parseInt(task.time_saving) || 0,
+        firstTimestamp: task.timestamp,
+        lastTimestamp: task.timestamp
+      });
+    }
+  });
+
+  return groups;
+}
+
+// タスク名の類似度判定（簡易版）
+function isSimilarTask(task1, task2) {
+  // 正規化（小文字化、記号除去）
+  const normalize = (str) => str.toLowerCase().replace(/[^a-z0-9あ-ん]/g, '');
+  const normalized1 = normalize(task1);
+  const normalized2 = normalize(task2);
+
+  // 完全一致
+  if (normalized1 === normalized2) return true;
+
+  // 一方が他方を含む（60%以上の長さ）
+  const shorter = normalized1.length < normalized2.length ? normalized1 : normalized2;
+  const longer = normalized1.length < normalized2.length ? normalized2 : normalized1;
+
+  if (longer.includes(shorter) && shorter.length / longer.length >= 0.6) {
+    return true;
+  }
+
+  // 共通部分が多い（70%以上）
+  const commonLength = longestCommonSubstring(normalized1, normalized2);
+  const similarity = commonLength / Math.max(normalized1.length, normalized2.length);
+
+  return similarity >= 0.7;
+}
+
+// 最長共通部分文字列の長さ
+function longestCommonSubstring(str1, str2) {
+  const matrix = Array(str1.length + 1).fill(null).map(() => Array(str2.length + 1).fill(0));
+  let maxLength = 0;
+
+  for (let i = 1; i <= str1.length; i++) {
+    for (let j = 1; j <= str2.length; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        matrix[i][j] = matrix[i - 1][j - 1] + 1;
+        maxLength = Math.max(maxLength, matrix[i][j]);
+      }
+    }
+  }
+
+  return maxLength;
+}
+
+// プロダクトアイデアの重複除去
+function deduplicateProductIdeas(ideas) {
+  const unique = [];
+  const seen = new Set();
+
+  ideas.forEach(idea => {
+    const key = idea.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(idea);
+    }
+  });
+
+  return unique;
+}
 
 console.log('Background service worker loaded');
