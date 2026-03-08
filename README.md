@@ -1,263 +1,95 @@
-# AI Task Analyzer
+# News Aggregator Skill
 
-> ブラウザ操作を記録し、AI代替可能なタスクを提案するChrome拡張機能
+テック系グローバルニュースと内部監査・コンプライアンス系ニュースを収集・AI分析し、Discord/Slackに日本語ダイジェストとして配信するOpenClawスキル。
 
-<div align="center">
+## ニュースソース
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Chrome](https://img.shields.io/badge/Chrome-Extension-blue.svg)](https://www.google.com/chrome/)
-[![OpenAI](https://img.shields.io/badge/Powered%20by-OpenAI-412991.svg)](https://openai.com/)
+### テック系
+- Hacker News (API)
+- GitHub Trending (スクレイピング)
+- Product Hunt (RSS)
+- TechCrunch (RSS)
+- The Verge (RSS)
+- Ars Technica (RSS)
 
-</div>
+### 内部監査・コンプライアンス系
+- SEC 米国証券取引委員会 (RSS)
+- 金融庁 (スクレイピング)
+- ISACA (RSS)
+- IIA 内部監査人協会 (RSS)
+- JICPA 日本公認会計士協会 (スクレイピング)
+- Compliance Week (RSS)
 
-## 💡 What is this?
+## セットアップ
 
-AI Task Analyzerは、あなたの日々のブラウザ操作を分析し、**AIで自動化できる作業**を見つけ出すChrome拡張機能です。
-
-毎日18時に、その日のブラウザ操作をAIが分析し、「この作業、AIにやらせた方が良いですよ」という提案を通知します。
-
-### 主な機能
-
-- 🔍 **自動記録** - ページ訪問、クリック、フォーム入力などの操作を自動記録
-- 🤖 **AI分析** - OpenAI GPT-4oで自動化可能なタスクを特定
-- ⏰ **定時通知** - 毎日18時に分析結果を通知（カスタマイズ可能）
-- 📊 **詳細レポート** - 推定削減時間、優先度、実装方法を提案
-- 📈 **週次・月次サマリー** - 繰り返しタスクを検出、累積削減時間を可視化
-- 📝 **Markdownエクスポート** - 分析結果をMD形式で保存、自動化のネタ帳として活用
-- 📚 **分析履歴管理** - 過去30件の分析結果を保存、いつでもエクスポート可能
-- 🔐 **プライバシー優先** - データはローカル保存、機密情報は記録しません
-
-## 🚀 Quick Start
-
-### 前提条件
-
-- Google Chrome ブラウザ
-- [OpenAI API Key](https://platform.openai.com/api-keys)
-
-### インストール
-
-1. リポジトリをクローン
-   ```bash
-   git clone https://github.com/yourusername/ai-task-analyzer-extension.git
-   ```
-
-2. Chromeで拡張機能を読み込み
-   - `chrome://extensions/` を開く
-   - 「デベロッパーモード」をON
-   - 「パッケージ化されていない拡張機能を読み込む」
-   - クローンしたフォルダを選択
-
-3. OpenAI API Keyを設定
-   - 拡張機能アイコンをクリック
-   - 「設定」タブでAPI Keyを入力
-   - 保存
-
-これで準備完了！ブラウザ操作が自動的に記録されます。
-
-## 📖 使い方
-
-### 自動分析
-
-通常は何もする必要はありません。毎日18時になると：
-
-1. その日のブラウザ操作を自動分析
-2. 通知でAI代替可能なタスクを表示
-3. クリックして詳細を確認
-
-### 手動分析
-
-いつでも分析を実行できます：
-
-1. 拡張機能アイコンをクリック
-2. 「ダッシュボード」→「今すぐ分析」
-3. 結果が「分析結果」タブに表示
-
-### Markdownエクスポート
-
-分析結果を自動化のネタ帳として保存できます：
-
-1. 「分析結果」タブを開く
-2. 「📝 MDエクスポート」ボタンをクリック
-3. Markdownファイルがダウンロードされます（ファイル名: `ai-task-analysis_YYYY-MM-DD.md`）
-
-**エクスポートされる内容：**
-- 自動化可能なタスク一覧（優先度、削減時間、実装方法）
-- プロダクト提案
-- 総評
-
-**過去の分析もエクスポート可能：**
-- 分析履歴セクションから過去5件を表示
-- 各履歴に個別のエクスポートボタン付き
-- 最大30件まで保存
-
-### 週次・月次サマリー
-
-複数日の分析を統合して傾向を把握できます：
-
-1. 「サマリー」タブを開く
-2. 「週次」または「月次」を選択
-3. 繰り返し提案されたタスクと統計を確認
-
-**サマリー機能の特徴：**
-- 📊 **統計ダッシュボード** - 分析回数、ユニークタスク数、累積削減時間を表示
-- 🔁 **繰り返しタスク検出** - 類似タスクを自動でグループ化し、出現回数順に表示
-- 💰 **削減効果の可視化** - 累積削減時間から1日平均の削減効果を計算
-- 📝 **サマリーエクスポート** - 週次/月次レポートとしてMarkdown形式で保存
-
-**活用例：**
-```
-週次レビュー（毎週月曜日）:
-「先週は『売上レポート作成』が5回提案された。累積30分削減可能。
- 今週はこれを自動化しよう！」
-
-月次振り返り（月末）:
-「今月は合計15個のタスクで240分（4時間）の削減が可能だった。
- 優先度の高い3つのタスクから着手する。」
+```bash
+pip install -r requirements.txt
 ```
 
-## 🔍 分析例
+### 環境変数
 
-AIは以下のような観点から、自動化の提案を行います：
-
-| 検出パターン | 提案例 |
-|------------|--------|
-| 同じフォームへの毎日アクセス | ブラウザ自動化（Puppeteer）の導入 |
-| 複数サイトからの情報収集 | RSSリーダー、AIニュース要約の活用 |
-| 頻繁なコピー＆ペースト | API連携、データ転記自動化ツール |
-| 繰り返しクリック操作 | ブラウザマクロ、Chrome API活用 |
-
-分析結果には以下が含まれます：
-
-- ✅ 自動化可能なタスク一覧
-- ⏱️ 推定削減時間（分/日）
-- 🎯 優先度（高/中/低）
-- 💡 実装方法の提案
-- 🛠️ プロダクトアイデア
-
-## 🔒 プライバシー・セキュリティ
-
-### 🛡️ プライバシー保護機能
-
-このプロジェクトでは、プライバシーを最優先に設計しています：
-
-✅ **URLクエリパラメータを除外** - `?user_id=123`などの個人情報を含む可能性のあるパラメータは記録しません
-✅ **ページタイトルを記録しない** - 個人名や機密情報が含まれる可能性を排除
-✅ **機密サイトを自動除外** - password、login、auth、tokenなどのキーワードを含むURLは自動でマスキング
-✅ **パスワード入力フィールドは記録しない** - 入力内容はもちろん、入力イベント自体も記録しません
-✅ **クレジットカード情報は記録しない** - カード番号入力フィールドは完全に除外
-✅ **データはローカルのみに保存** - Chrome Storage API（ブラウザ内のみ）
-✅ **分析時のみ外部送信** - OpenAI APIへは分析実行時のみ送信
-
-### 記録される情報
-
-```
-記録される: https://example.com/products/category
-記録されない: https://example.com/products?user_id=123&session=xyz
-             ↑ クエリパラメータは自動除外
+```bash
+export OPENAI_API_KEY="sk-..."           # AI分析に必要
+export DISCORD_WEBHOOK_URL="https://..."  # Discord配信に必要
+export SLACK_WEBHOOK_URL="https://..."    # Slack配信に必要（任意）
 ```
 
-### ⚠️ 注意事項
+## 使い方
 
-**完全な保証はできません**。以下のリスクが残ります：
+```bash
+# 全ソースからニュース取得（基本）
+python fetch_news.py --source all --limit 5
 
-- フォームフィールド名から情報が推測される可能性
-- URLパス自体に個人情報が含まれる場合（例: `/users/john-doe/profile`）
+# テック系のみ、AI関連でフィルタ + ディープ分析
+python fetch_news.py --category tech --keyword AI --deep
 
-**推奨事項：**
-- 機密情報を扱うサイトでは「記録を無効化」を設定で切り替える
-- 業務利用の場合は、組織のセキュリティポリシーを確認する
+# 内部監査系をDiscordに配信
+python fetch_news.py --category audit --deep --notify discord
 
-### データの保存先
-
-- **ローカル**: Chrome Storage API（ブラウザ内のみ）
-- **外部送信**: OpenAI API（分析実行時のみ）
-
-## 🛠️ 開発者向け
-
-### ファイル構造
-
-```
-ai-task-analyzer-extension/
-├── manifest.json          # 拡張機能設定（Manifest V3）
-├── background.js          # Service Worker（記録・分析・通知）
-├── content.js            # Content Script（操作記録）
-└── popup/
-    ├── popup.html        # ポップアップUI
-    ├── popup.css         # スタイル
-    └── popup.js          # UIロジック
+# 全ソースフル分析 + Discord配信
+python fetch_news.py --source all --limit 15 --deep --notify discord
 ```
 
-### デバッグ
+### オプション
 
-**Background Service Worker:**
+| オプション | デフォルト | 説明 |
+|-----------|----------|------|
+| `--source` | all | ソース指定 (hackernews, github_trending, techcrunch 等) |
+| `--category` | all | カテゴリ (tech, audit, all) |
+| `--limit` | 10 | ソースあたりの取得件数 |
+| `--keyword` | - | フィルタキーワード（カンマ区切り、自動展開対応） |
+| `--deep` | false | AI分析を有効化 |
+| `--notify` | none | 配信先 (discord, slack, both, none) |
+| `--output` | reports | レポート保存先ディレクトリ |
+| `--config` | config.yaml | 設定ファイルパス |
+
+## キーワード自動展開
+
+| 入力 | 展開先 |
+|------|--------|
+| AI | AI, LLM, GPT, Claude, Generative, Machine Learning, RAG, Agent, Transformer |
+| 監査 | 監査, Audit, 内部統制, Internal Control, コンプライアンス, Compliance, SOX, J-SOX |
+| セキュリティ | セキュリティ, Security, Cybersecurity, 脆弱性, Vulnerability, ゼロデイ |
+
+## ディレクトリ構成
+
 ```
-chrome://extensions/ → サービスワーカー → コンソール
+├── fetch_news.py         # メインCLI
+├── sources/
+│   ├── hackernews.py     # Hacker News API
+│   ├── github_trending.py # GitHub Trending
+│   ├── rss_generic.py    # 汎用RSSフェッチャー
+│   └── audit_sources.py  # 内部監査系ソース
+├── analyzer.py           # GPT-4o AI分析
+├── formatter.py          # Markdownレポート生成
+├── notifier.py           # Discord/Slack配信
+├── config.yaml           # 設定ファイル
+├── templates.md          # コマンドテンプレート
+├── reports/              # 生成レポート保存先
+├── SKILL.md              # OpenClawスキル定義
+└── requirements.txt
 ```
 
-**Content Script:**
-```
-任意のページでF12 → コンソールタブ
-```
+## ライセンス
 
-**Popup:**
-```
-ポップアップで右クリック → 検証
-```
-
-### カスタマイズ
-
-分析プロンプトを変更するには、`background.js`の`analyzeWithOpenAI`関数を編集してください。
-
-記録する操作を追加するには、`content.js`にイベントリスナーを追加してください。
-
-## 🗺️ Roadmap
-
-- [x] プライバシー保護の強化（URLパラメータのマスキング）✅
-- [x] ページタイトルの記録除外✅
-- [x] 機密サイトの自動検出とマスキング✅
-- [x] Markdownエクスポート機能✅
-- [x] 分析履歴管理✅
-- [x] 週次/月次サマリー✅
-- [ ] ローカルLLMのサポート
-- [ ] 自動化スクリプトの自動生成
-- [ ] Chrome Web Storeへの公開
-
-## 🤝 Contributing
-
-コントリビューションを歓迎します！
-
-1. このリポジトリをFork
-2. Feature branchを作成 (`git checkout -b feature/AmazingFeature`)
-3. 変更をCommit (`git commit -m 'Add some AmazingFeature'`)
-4. BranchにPush (`git push origin feature/AmazingFeature`)
-5. Pull Requestを作成
-
-### バグ報告・機能リクエスト
-
-[Issues](https://github.com/yourusername/ai-task-analyzer-extension/issues)から報告してください。
-
-## 📄 License
-
-このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルを参照してください。
-
-## ⚠️ Disclaimer
-
-- この拡張機能は**開発版**です
-- OpenAI API使用料金が発生します
-- 業務利用の場合は、組織のセキュリティポリシーを確認してください
-- プライバシーに配慮していますが、完全な保証はできません
-- 機密情報を扱うサイトでの使用は推奨しません
-
-## 📮 Contact
-
-質問や提案があれば、[Issues](https://github.com/yourusername/ai-task-analyzer-extension/issues)でお知らせください。
-
----
-
-<div align="center">
-
-**楽しいAI活用を！** 🤖✨
-
-Made with ❤️ and [Claude Code](https://claude.com/claude-code)
-
-</div>
+MIT

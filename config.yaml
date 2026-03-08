@@ -1,0 +1,113 @@
+# ニュースアグリゲーター設定
+
+openai:
+  api_key: "${OPENAI_API_KEY}"
+  model: "gpt-4o"
+  max_tokens: 4096
+
+notifications:
+  discord:
+    webhook_url: "${DISCORD_WEBHOOK_URL}"
+    enabled: true
+  slack:
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    enabled: false
+
+defaults:
+  limit: 10
+  language: "ja"
+  deep_analysis: false
+
+keyword_expansion:
+  AI: "AI,LLM,GPT,Claude,Generative,Machine Learning,RAG,Agent,Transformer"
+  セキュリティ: "セキュリティ,Security,Cybersecurity,脆弱性,Vulnerability,ゼロデイ"
+  監査: "監査,Audit,内部統制,Internal Control,コンプライアンス,Compliance,SOX,J-SOX"
+  クラウド: "クラウド,Cloud,AWS,Azure,GCP,SaaS,IaaS"
+  ブロックチェーン: "ブロックチェーン,Blockchain,Web3,DeFi,NFT,Crypto"
+
+sources:
+  # --- テック系グローバル ---
+  hackernews:
+    name: "Hacker News"
+    type: "api"
+    category: "tech"
+    url: "https://hacker-news.firebaseio.com/v0"
+    enabled: true
+
+  github_trending:
+    name: "GitHub Trending"
+    type: "scraping"
+    category: "tech"
+    url: "https://github.com/trending"
+    enabled: true
+
+  product_hunt:
+    name: "Product Hunt"
+    type: "rss"
+    category: "tech"
+    url: "https://www.producthunt.com/feed"
+    enabled: true
+
+  techcrunch:
+    name: "TechCrunch"
+    type: "rss"
+    category: "tech"
+    url: "https://techcrunch.com/feed/"
+    enabled: true
+
+  the_verge:
+    name: "The Verge"
+    type: "rss"
+    category: "tech"
+    url: "https://www.theverge.com/rss/index.xml"
+    enabled: true
+
+  ars_technica:
+    name: "Ars Technica"
+    type: "rss"
+    category: "tech"
+    url: "https://feeds.arstechnica.com/arstechnica/index"
+    enabled: true
+
+  # --- 内部監査・コンプライアンス系 ---
+  sec_gov:
+    name: "SEC (米国証券取引委員会)"
+    type: "rss"
+    category: "audit"
+    url: "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&type=&dateb=&owner=include&count=40&search_text=&action=getcompany&RSS"
+    enabled: true
+
+  fsa_japan:
+    name: "金融庁"
+    type: "scraping"
+    category: "audit"
+    url: "https://www.fsa.go.jp/news/index.html"
+    enabled: true
+
+  isaca:
+    name: "ISACA"
+    type: "rss"
+    category: "audit"
+    url: "https://www.isaca.org/resources/news-and-trends/rss"
+    enabled: true
+
+  iia:
+    name: "IIA (内部監査人協会)"
+    type: "rss"
+    category: "audit"
+    url: "https://www.theiia.org/en/content/rss/"
+    enabled: true
+
+  jicpa:
+    name: "JICPA (日本公認会計士協会)"
+    type: "scraping"
+    category: "audit"
+    url: "https://jicpa.or.jp/news/"
+    enabled: true
+
+  compliance_week:
+    name: "Compliance Week"
+    type: "rss"
+    category: "audit"
+    url: "https://www.complianceweek.com/rss"
+    enabled: true
